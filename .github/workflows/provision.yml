@@ -20,6 +20,11 @@ on:
       - "**/*.tf"
       - ".github/workflows/provision.yml"
 
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
 jobs:
   provision:
     name: Provision Infrastructure
