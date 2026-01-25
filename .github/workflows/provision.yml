@@ -1,0 +1,31 @@
+name: Provision Hobio Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/provision.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: string
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/provision.yml"
+
+jobs:
+  provision:
+    name: Provision Infrastructure
+    uses: nirojasmar/base-workflows/.github/workflows/terraform-plan-apply.yml@infra-workflows
+    secrets: inherit
+    with:
+      environment: ${{ github.event.inputs.environment != '' && github.event.inputs.environment || 'dev,qa,prod' }}
+      backend_config_bucket: '{"dev": "hobio-nonprod-tfstates-ue1", "qa": "hobio-nonprod-tfstates-ue1", "prod": "hobio-prod-tfstates-ue1"}'
+      timeout_minutes: 120
