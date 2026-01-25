@@ -23,7 +23,7 @@ on:
 jobs:
   provision:
     name: Provision Infrastructure
-    uses: nirojasmar/base-workflows/.github/workflows/provision-infra@infra-workflows
+    uses: nirojasmar/base-workflows/.github/workflows/provision-infra.yml@infra-workflows
     secrets: inherit
     with:
       environment: ${{ github.event.inputs.environment != '' && github.event.inputs.environment || 'dev,qa,prod' }}
