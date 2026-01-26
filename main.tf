@@ -12,6 +12,26 @@ provider "google" {
   region  = "us-east1"
 }
 
+resource "google_storage_bucket" "logging_sink" {
+  name          = "hobio-nonprod-logging-ue1"
+  location      = "US-EAST1"
+  force_destroy = false
+  storage_class = "STANDARD"
+
+  uniform_bucket_level_access = true
+
+  lifecycle_rule {
+    condition {
+      age = 90
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  public_access_prevention = "enforced"
+}
+
 resource "google_storage_bucket" "terraform_state" {
   name          = "hobio-nonprod-tfstates-ue1"
   location      = "US-EAST1"
@@ -19,6 +39,11 @@ resource "google_storage_bucket" "terraform_state" {
   storage_class = "STANDARD"
 
   uniform_bucket_level_access = true
+
+  logging {
+    log_bucket = google_storage_bucket.logging_sink.name
+    log_object_prefix = "logs/tf-state"
+  }
 
   versioning {
     enabled = true
