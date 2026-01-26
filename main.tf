@@ -12,13 +12,13 @@ provider "google" {
   region  = "us-east1"
 }
 
-# checkov:skip=CKV_GCP_62: This is the destination bucket for GCS access logs; logging it would create a loop.
 resource "google_storage_bucket" "logging_sink" {
   name          = "hobio-nonprod-logging-ue1"
   location      = "US-EAST1"
   force_destroy = false
   storage_class = "STANDARD"
 
+  # checkov:skip=CKV_GCP_62: This is the destination bucket for GCS access logs; logging it would create a loop.
   uniform_bucket_level_access = true
 
   lifecycle_rule {
