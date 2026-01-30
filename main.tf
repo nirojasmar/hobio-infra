@@ -91,11 +91,32 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   description = "Allow SSH access via IAP"
 }
 
+resource "google_compute_firewall" "allow_rabbitmq" {
+  name    = "allow-rabbitmq-internal"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["5672", "15672"]
+  }
+
+  source_ranges = ["10.0.0.0/8"] 
+  target_tags   = ["rabbitmq-server"]
+  description   = "Allow RabbitMQ traffic"
+}
+
+resource "google_vpc_access_connector" "connector" {
+  name          = "hobio-${var.environment}-connector-ue1"
+  region        = var.region
+  ip_cidr_range = "10.8.0.0/28"
+  network       = "default"
+}
+
 resource "google_compute_instance" "rabbitmq_instance" {
   name         = "${var.project_id}-${var.environment}-rabbitmq-server"
   machine_type = "e2-micro"
   zone         = "${var.region}-b"
-  tags = ["allow-ssh"]
+  tags = ["allow-ssh", "rabbitmq-server"]
 
   shielded_instance_config {
     enable_secure_boot          = true
@@ -122,10 +143,15 @@ resource "google_compute_instance" "rabbitmq_instance" {
   metadata_startup_script = <<-EOT
     #!/bin/bash
     sudo apt-get update
-    sudo apt-get install -y erlang
     sudo apt-get install -y rabbitmq-server
     sudo systemctl enable rabbitmq-server
     sudo systemctl start rabbitmq-server
+    sudo rabbitmq-plugins enable rabbitmq_management
+    sudo systemctl restart rabbitmq-server
+    sleep 5
+    sudo rabbitmqctl add_user admin admin
+    sudo rabbitmqctl set_user_tags admin administrator
+    sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
   EOT
 
   labels = {
