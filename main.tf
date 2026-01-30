@@ -159,3 +159,19 @@ resource "google_compute_instance" "rabbitmq_instance" {
     service     = "rabbitmq"
   }
 }
+
+resource "google_artifact_registry_repository" "docker_repo" {
+  location      = var.region
+  repository_id = "hobio-${var.type}-repo-ue1"
+  description   = "Docker repository for ${var.type} environment"
+  format        = "DOCKER"
+
+  # checkov:skip=CKV_GCP_84: We use GMEK for simplicity
+  docker_config {
+    immutable_tags = true
+  }
+
+  labels = {
+    environment = var.environment
+  }
+}
