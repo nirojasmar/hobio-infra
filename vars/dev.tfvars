@@ -1,2 +1,3 @@
-region = "us-central1"
+project_id = "hobio-nonprod"
+region = "us-east1"
 environment = "dev"
