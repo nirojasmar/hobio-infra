@@ -94,7 +94,7 @@ resource "google_compute_firewall" "allow_iap_ssh" {
 resource "google_compute_instance" "rabbitmq_instance" {
   name         = "${var.project_id}-${var.environment}-rabbitmq-server"
   machine_type = "e2-micro"
-  zone         = "${var.region}-a"
+  zone         = "${var.region}-b"
   tags = ["allow-ssh"]
 
   shielded_instance_config {
