@@ -110,6 +110,9 @@ resource "google_vpc_access_connector" "connector" {
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
   network       = "default"
+
+  min_throughput = 200
+  max_throughput = 300
 }
 
 resource "google_compute_instance" "rabbitmq_instance" {
