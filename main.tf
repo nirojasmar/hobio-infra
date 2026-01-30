@@ -13,7 +13,7 @@ provider "google" {
 }
 
 resource "google_storage_bucket" "logging_sink" {
-  name          = "hobio-nonprod-logging-ue1"
+  name          = "hobio-${var.type}-logging-ue1"
   location      = "US-EAST1"
   force_destroy = false
   storage_class = "STANDARD"
@@ -38,7 +38,7 @@ resource "google_storage_bucket" "logging_sink" {
 }
 
 resource "google_storage_bucket" "terraform_state" {
-  name          = "hobio-nonprod-tfstates-ue1"
+  name          = "hobio-${var.type}-tfstates-ue1"
   location      = "US-EAST1"
   force_destroy = false
   storage_class = "STANDARD"
@@ -57,67 +57,66 @@ resource "google_storage_bucket" "terraform_state" {
   public_access_prevention = "enforced"
 }
 
-resource "google_storage_bucket" "logging_sink_prod" {
-  name          = "hobio-prod-logging-ue1"
-  location      = "US-EAST1"
-  force_destroy = false
-  storage_class = "STANDARD"
-
-  # checkov:skip=CKV_GCP_62: This is the destination bucket for GCS access logs; logging it would create a loop.
-  uniform_bucket_level_access = true
-
-  lifecycle_rule {
-    condition {
-      age = 90
-    }
-    action {
-      type = "Delete"
-    }
-  }
-
-  versioning {
-    enabled = true
-  }
-
-  public_access_prevention = "enforced"
+resource "google_compute_router" "router" {
+  name    = "hobio-${var.type}-router-ue1"
+  region  = var.region
+  network = "default"
 }
 
-resource "google_storage_bucket" "terraform_state_prod" {
-  name          = "hobio-prod-tfstates-ue1"
-  location      = "US-EAST1"
-  force_destroy = false
-  storage_class = "STANDARD"
+resource "google_compute_router_nat" "nat" {
+  name                               = "hobio-${var.type}-nat-ue1"
+  router                             = google_compute_router.router.name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 
-  uniform_bucket_level_access = true
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+}
 
-  logging {
-    log_bucket = google_storage_bucket.logging_sink_prod.name
-    log_object_prefix = "logs/tf-state"
+resource "google_compute_firewall" "allow_iap_ssh" {
+  name    = "allow-ssh-via-iap"
+  network = "default"
+
+  source_ranges = ["35.235.240.0/20"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
   }
 
-  versioning {
-    enabled = true
-  }
-
-  public_access_prevention = "enforced"
+  target_tags = ["allow-ssh"]
+  description = "Allow SSH access via IAP"
 }
 
 resource "google_compute_instance" "rabbitmq_instance" {
-  name         = "${var.project_id}-${var.environment}-rabbitmq"
+  name         = "${var.project_id}-${var.environment}-rabbitmq-server"
   machine_type = "e2-micro"
   zone         = "${var.region}-a"
+  tags = ["allow-ssh"]
+
+  shielded_instance_config {
+    enable_secure_boot          = true
+    enable_vtpm                 = true
+    enable_integrity_monitoring = true
+  }
 
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-11"
       size  = 30
     }
+    # checkov:skip=CKV_GCP_38: We use GMEK for simplicity
   }
 
   network_interface {
     network = "default"
-    access_config {
-    }
+  }
+
+  metadata = {
+    block-project-ssh-keys = true
   }
 
   metadata_startup_script = <<-EOT

@@ -12,3 +12,8 @@ variable "environment" {
     type = string
     description = "environment (e.g dev, qa, prod, etc)"
 }
+
+variable "type" {
+    type = string
+    description = "account type (e.g nonprod, prod)"
+}
