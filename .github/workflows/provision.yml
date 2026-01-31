@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "**/*.tf"
-      - ".github/workflows/provision.yml"
+      - "**"
+      - "!README.md"
   workflow_dispatch:
     inputs:
       environment:
@@ -14,11 +14,12 @@ on:
         required: true
         type: string
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
     branches:
       - main
-    paths:
-      - "**/*.tf"
-      - ".github/workflows/provision.yml"
 
 permissions:
   contents: read

@@ -8,12 +8,12 @@ terraform {
 }
 
 provider "google" {
-  project = "hobio-nonprod"
-  region  = "us-east1"
+  project = var.project_id
+  region  = var.region
 }
 
 resource "google_storage_bucket" "logging_sink" {
-  name          = "hobio-nonprod-logging-ue1"
+  name          = "hobio-${var.type}-logging-ue1"
   location      = "US-EAST1"
   force_destroy = false
   storage_class = "STANDARD"
@@ -38,7 +38,7 @@ resource "google_storage_bucket" "logging_sink" {
 }
 
 resource "google_storage_bucket" "terraform_state" {
-  name          = "hobio-nonprod-tfstates-ue1"
+  name          = "hobio-${var.type}-tfstates-ue1"
   location      = "US-EAST1"
   force_destroy = false
   storage_class = "STANDARD"
@@ -55,4 +55,126 @@ resource "google_storage_bucket" "terraform_state" {
   }
 
   public_access_prevention = "enforced"
+}
+
+resource "google_compute_router" "router" {
+  name    = "hobio-${var.type}-router-ue1"
+  region  = var.region
+  network = "default"
+}
+
+resource "google_compute_router_nat" "nat" {
+  name                               = "hobio-${var.type}-nat-ue1"
+  router                             = google_compute_router.router.name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+
+  log_config {
+    enable = true
+    filter = "ERRORS_ONLY"
+  }
+}
+
+resource "google_compute_firewall" "allow_iap_ssh" {
+  name    = "allow-ssh-via-iap"
+  network = "default"
+
+  source_ranges = ["35.235.240.0/20"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  target_tags = ["allow-ssh"]
+  description = "Allow SSH access via IAP"
+}
+
+resource "google_compute_firewall" "allow_rabbitmq" {
+  name    = "allow-rabbitmq-internal"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["5672", "15672"]
+  }
+
+  source_ranges = ["10.0.0.0/8"] 
+  target_tags   = ["rabbitmq-server"]
+  description   = "Allow RabbitMQ traffic"
+}
+
+resource "google_vpc_access_connector" "connector" {
+  name          = "hobio-${var.environment}-connector-ue1"
+  region        = var.region
+  ip_cidr_range = "10.8.0.0/28"
+  network       = "default"
+
+  min_throughput = 200
+  max_throughput = 300
+}
+
+resource "google_compute_instance" "rabbitmq_instance" {
+  name         = "${var.project_id}-${var.environment}-rabbitmq-server"
+  machine_type = "e2-micro"
+  zone         = "${var.region}-b"
+  tags = ["allow-ssh", "rabbitmq-server"]
+
+  shielded_instance_config {
+    enable_secure_boot          = true
+    enable_vtpm                 = true
+    enable_integrity_monitoring = true
+  }
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-11"
+      size  = 30
+    }
+    # checkov:skip=CKV_GCP_38: We use GMEK for simplicity
+  }
+
+  network_interface {
+    network = "default"
+  }
+
+  metadata = {
+    block-project-ssh-keys = true
+  }
+
+  metadata_startup_script = <<-EOT
+    #!/bin/bash
+    sudo apt-get update
+    sudo apt-get install -y rabbitmq-server
+    sudo systemctl enable rabbitmq-server
+    sudo systemctl start rabbitmq-server
+    sudo rabbitmq-plugins enable rabbitmq_management
+    sudo systemctl restart rabbitmq-server
+    sleep 5
+    sudo rabbitmqctl add_user admin admin
+    sudo rabbitmqctl set_user_tags admin administrator
+    sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
+  EOT
+
+  labels = {
+    environment = var.environment
+    service     = "rabbitmq"
+  }
+}
+
+resource "google_artifact_registry_repository" "docker_repo" {
+  location      = var.region
+  repository_id = "hobio-${var.type}-repo-ue1"
+  description   = "Docker repository for ${var.type} environment"
+  format        = "DOCKER"
+
+  # checkov:skip=CKV_GCP_84: We use GMEK for simplicity
+  docker_config {
+    immutable_tags = true
+  }
+
+  labels = {
+    environment = var.environment
+  }
 }
