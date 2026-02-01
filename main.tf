@@ -106,7 +106,7 @@ resource "google_compute_firewall" "allow_rabbitmq" {
 }
 
 resource "google_vpc_access_connector" "connector" {
-  name          = "hobio-${var.type}-connector-ue1"
+  name          = "hobio-${var.type}-vpc-ue1"
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
   network       = "default"
