@@ -12,7 +12,12 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  is_dev = var.environment == "dev"
+}
+
 resource "google_storage_bucket" "logging_sink" {
+  count         = local.is_dev ? 1 : 0
   name          = "hobio-${var.type}-logging-ue1"
   location      = "US-EAST1"
   force_destroy = false
@@ -38,6 +43,7 @@ resource "google_storage_bucket" "logging_sink" {
 }
 
 resource "google_storage_bucket" "terraform_state" {
+  count         = local.is_dev ? 1 : 0
   name          = "hobio-${var.type}-tfstates-ue1"
   location      = "US-EAST1"
   force_destroy = false
@@ -58,12 +64,14 @@ resource "google_storage_bucket" "terraform_state" {
 }
 
 resource "google_compute_router" "router" {
+  count   = local.is_dev ? 1 : 0
   name    = "hobio-${var.type}-router-ue1"
   region  = var.region
   network = "default"
 }
 
 resource "google_compute_router_nat" "nat" {
+  count                              = local.is_dev ? 1 : 0
   name                               = "hobio-${var.type}-nat-ue1"
   router                             = google_compute_router.router.name
   region                             = var.region
@@ -77,9 +85,9 @@ resource "google_compute_router_nat" "nat" {
 }
 
 resource "google_compute_firewall" "allow_iap_ssh" {
+  count   = local.is_dev ? 1 : 0
   name    = "allow-ssh-via-iap"
   network = "default"
-
   source_ranges = ["35.235.240.0/20"]
 
   allow {
@@ -92,6 +100,7 @@ resource "google_compute_firewall" "allow_iap_ssh" {
 }
 
 resource "google_compute_firewall" "allow_rabbitmq" {
+  count   = local.is_dev ? 1 : 0
   name    = "allow-rabbitmq-internal"
   network = "default"
 
@@ -106,6 +115,7 @@ resource "google_compute_firewall" "allow_rabbitmq" {
 }
 
 resource "google_vpc_access_connector" "connector" {
+  count         = local.is_dev ? 1 : 0
   name          = "hobio-${var.type}-vpc-ue1"
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
@@ -164,6 +174,7 @@ resource "google_compute_instance" "rabbitmq_instance" {
 }
 
 resource "google_artifact_registry_repository" "docker_repo" {
+  count         = local.is_dev ? 1 : 0
   location      = var.region
   repository_id = "hobio-${var.type}-repo-ue1"
   description   = "Docker repository for ${var.type} environment"
