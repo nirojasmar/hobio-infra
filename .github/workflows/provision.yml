@@ -29,7 +29,7 @@ permissions:
 jobs:
   provision:
     name: Provision Infrastructure
-    uses: nirojasmar/base-workflows/.github/workflows/provision-infrastructure.yml@infra-workflows
+    uses: nirojasmar/base-workflows/.github/workflows/provision-infrastructure.yml@feature/cloud-run-deploy
     secrets: inherit
     with:
       environment: ${{ github.event.inputs.environment != '' && github.event.inputs.environment || 'dev,qa,prod' }}
