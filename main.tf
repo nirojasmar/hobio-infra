@@ -12,7 +12,35 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  create_shared_infra = var.environment == "dev" || var.environment == "prod"
+}
+
+data "google_project" "current" {}
+
+resource "google_secret_manager_secret" "rabbitmq_connection_string" {
+  secret_id = "rabbitmq-connection-string-${var.environment}"
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    service     = "rabbitmq"
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
+  secret_id = google_secret_manager_secret.rabbitmq_connection_string.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [google_secret_manager_secret.rabbitmq_connection_string]
+}
+
 resource "google_storage_bucket" "logging_sink" {
+  count         = local.create_shared_infra ? 1 : 0
   name          = "hobio-${var.type}-logging-ue1"
   location      = "US-EAST1"
   force_destroy = false
@@ -38,6 +66,7 @@ resource "google_storage_bucket" "logging_sink" {
 }
 
 resource "google_storage_bucket" "terraform_state" {
+  count         = local.create_shared_infra ? 1 : 0
   name          = "hobio-${var.type}-tfstates-ue1"
   location      = "US-EAST1"
   force_destroy = false
@@ -46,8 +75,8 @@ resource "google_storage_bucket" "terraform_state" {
   uniform_bucket_level_access = true
 
   logging {
-    log_bucket = google_storage_bucket.logging_sink.name
-    log_object_prefix = "logs/tf-state"
+    log_bucket = google_storage_bucket.logging_sink[0].name
+    log_object_prefix = "logs/tf-state/${var.environment}"
   }
 
   versioning {
@@ -58,14 +87,16 @@ resource "google_storage_bucket" "terraform_state" {
 }
 
 resource "google_compute_router" "router" {
+  count   = local.create_shared_infra ? 1 : 0
   name    = "hobio-${var.type}-router-ue1"
   region  = var.region
   network = "default"
 }
 
 resource "google_compute_router_nat" "nat" {
+  count                              = local.create_shared_infra ? 1 : 0
   name                               = "hobio-${var.type}-nat-ue1"
-  router                             = google_compute_router.router.name
+  router                             = google_compute_router.router[0].name
   region                             = var.region
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
@@ -77,9 +108,9 @@ resource "google_compute_router_nat" "nat" {
 }
 
 resource "google_compute_firewall" "allow_iap_ssh" {
+  count   = local.create_shared_infra ? 1 : 0
   name    = "allow-ssh-via-iap"
   network = "default"
-
   source_ranges = ["35.235.240.0/20"]
 
   allow {
@@ -92,6 +123,7 @@ resource "google_compute_firewall" "allow_iap_ssh" {
 }
 
 resource "google_compute_firewall" "allow_rabbitmq" {
+  count   = local.create_shared_infra ? 1 : 0
   name    = "allow-rabbitmq-internal"
   network = "default"
 
@@ -106,7 +138,8 @@ resource "google_compute_firewall" "allow_rabbitmq" {
 }
 
 resource "google_vpc_access_connector" "connector" {
-  name          = "hobio-${var.environment}-connector-ue1"
+  count         = local.create_shared_infra ? 1 : 0
+  name          = "hobio-${var.type}-vpc-ue1"
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
   network       = "default"
@@ -164,6 +197,7 @@ resource "google_compute_instance" "rabbitmq_instance" {
 }
 
 resource "google_artifact_registry_repository" "docker_repo" {
+  count         = local.create_shared_infra ? 1 : 0
   location      = var.region
   repository_id = "hobio-${var.type}-repo-ue1"
   description   = "Docker repository for ${var.type} environment"
@@ -175,6 +209,6 @@ resource "google_artifact_registry_repository" "docker_repo" {
   }
 
   labels = {
-    environment = var.environment
+    environment = var.type
   }
 }
