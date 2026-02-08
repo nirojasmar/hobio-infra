@@ -201,15 +201,21 @@ resource "google_compute_instance" "rabbitmq_instance" {
     #!/bin/bash
     sudo apt-get update
     sudo apt-get install -y rabbitmq-server
+    RABBIT_PASS=$(gcloud secrets versions access latest --secret="rabbitmq-password-${var.environment}")
     sudo systemctl enable rabbitmq-server
     sudo systemctl start rabbitmq-server
     sudo rabbitmq-plugins enable rabbitmq_management
     sudo systemctl restart rabbitmq-server
     sleep 5
-    sudo rabbitmqctl add_user admin admin
+    sudo rabbitmqctl add_user admin "$RABBIT_PASS"
     sudo rabbitmqctl set_user_tags admin administrator
     sudo rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"
   EOT
+
+  service_account {
+    email  = "${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+    scopes = ["cloud-platform"]
+  }
 
   labels = {
     environment = var.environment
