@@ -31,7 +31,7 @@ resource "google_secret_manager_secret" "rabbitmq_connection_string" {
   }
 }
 
-resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
+resource "google_secret_manager_secret_iam_member" "cloudrun_access_connection_string" {
   secret_id = google_secret_manager_secret.rabbitmq_connection_string.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
@@ -52,7 +52,7 @@ resource "google_secret_manager_secret" "rabbitmq_pass" {
   }
 }
 
-resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
+resource "google_secret_manager_secret_iam_member" "cloudrun_access_pass" {
   secret_id = google_secret_manager_secret.rabbitmq_pass.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
