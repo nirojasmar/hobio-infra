@@ -39,6 +39,27 @@ resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
   depends_on = [google_secret_manager_secret.rabbitmq_connection_string]
 }
 
+resource "google_secret_manager_secret" "rabbitmq_pass" {
+  secret_id = "rabbitmq-password-${var.environment}"
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    service     = "rabbitmq"
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_access" {
+  secret_id = google_secret_manager_secret.rabbitmq_pass.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [google_secret_manager_secret.rabbitmq_pass]
+}
+
 resource "google_storage_bucket" "logging_sink" {
   count         = local.create_shared_infra ? 1 : 0
   name          = "hobio-${var.type}-logging-ue1"
