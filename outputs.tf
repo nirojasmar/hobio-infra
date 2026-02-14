@@ -9,8 +9,8 @@ output "rabbitmq_internal_ip" {
 }
 
 output "rabbitmq_connection_string" {
-  value       = "amqp://admin:SecretPass123@${google_compute_instance.rabbitmq_instance.network_interface[0].network_ip}:5672"
-  sensitive   = true
+  value     = "amqp://admin:SecretPass123@${google_compute_instance.rabbitmq_instance.network_interface[0].network_ip}:5672"
+  sensitive = true
 }
 
 output "ssh_command_iap" {

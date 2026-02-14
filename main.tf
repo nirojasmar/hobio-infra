@@ -96,7 +96,7 @@ resource "google_storage_bucket" "terraform_state" {
   uniform_bucket_level_access = true
 
   logging {
-    log_bucket = google_storage_bucket.logging_sink[0].name
+    log_bucket        = google_storage_bucket.logging_sink[0].name
     log_object_prefix = "logs/tf-state/${var.environment}"
   }
 
@@ -129,9 +129,9 @@ resource "google_compute_router_nat" "nat" {
 }
 
 resource "google_compute_firewall" "allow_iap_ssh" {
-  count   = local.create_shared_infra ? 1 : 0
-  name    = "allow-ssh-via-iap"
-  network = "default"
+  count         = local.create_shared_infra ? 1 : 0
+  name          = "allow-ssh-via-iap"
+  network       = "default"
   source_ranges = ["35.235.240.0/20"]
 
   allow {
@@ -153,7 +153,7 @@ resource "google_compute_firewall" "allow_rabbitmq" {
     ports    = ["5672", "15672"]
   }
 
-  source_ranges = ["10.0.0.0/8"] 
+  source_ranges = ["10.0.0.0/8"]
   target_tags   = ["rabbitmq-server"]
   description   = "Allow RabbitMQ traffic"
 }
@@ -173,7 +173,7 @@ resource "google_compute_instance" "rabbitmq_instance" {
   name         = "${var.project_id}-${var.environment}-rabbitmq-server"
   machine_type = "e2-micro"
   zone         = "${var.region}-b"
-  tags = ["allow-ssh", "rabbitmq-server"]
+  tags         = ["allow-ssh", "rabbitmq-server"]
 
   shielded_instance_config {
     enable_secure_boot          = true
