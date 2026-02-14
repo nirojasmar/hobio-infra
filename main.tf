@@ -143,17 +143,32 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   description = "Allow SSH access via IAP"
 }
 
-resource "google_compute_firewall" "allow_rabbitmq" {
-  count   = local.create_shared_infra ? 1 : 0
-  name    = "allow-rabbitmq-internal"
-  network = "default"
+resource "google_compute_firewall" "allow_iap_rabbitmq" {
+  count         = local.create_shared_infra ? 1 : 0
+  name          = "allow-rabbitmq-via-iap"
+  network       = "default"
+  source_ranges = ["35.235.240.0/20"]
 
   allow {
     protocol = "tcp"
     ports    = ["5672", "15672"]
   }
 
+  target_tags = ["rabbitmq-server"]
+  description = "Allow RabbitMQ access via IAP"
+}
+
+resource "google_compute_firewall" "allow_rabbitmq" {
+  count   = local.create_shared_infra ? 1 : 0
+  name    = "allow-rabbitmq-internal"
+  network = "default"
   source_ranges = ["10.0.0.0/8"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["5672", "15672"]
+  }
+
   target_tags   = ["rabbitmq-server"]
   description   = "Allow RabbitMQ traffic"
 }
