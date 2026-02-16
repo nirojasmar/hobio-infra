@@ -107,6 +107,27 @@ resource "google_storage_bucket" "terraform_state" {
   public_access_prevention = "enforced"
 }
 
+resource "google_storage_bucket" "reports_bucket" {
+  count         = local.create_shared_infra ? 1 : 0
+  name          = "hobio-${var.type}-reports-ue1"
+  location      = "US-EAST1"
+  force_destroy = false
+  storage_class = "STANDARD"
+
+  uniform_bucket_level_access = true
+
+  logging {
+    log_bucket        = google_storage_bucket.logging_sink[0].name
+    log_object_prefix = "logs/reports/${var.environment}"
+  }
+
+  versioning {
+    enabled = true
+  }
+
+  public_access_prevention = "enforced"
+}
+
 resource "google_compute_router" "router" {
   count   = local.create_shared_infra ? 1 : 0
   name    = "hobio-${var.type}-router-ue1"
