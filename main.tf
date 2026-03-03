@@ -268,7 +268,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
 
   # checkov:skip=CKV_GCP_84: We use GMEK for simplicity
   docker_config {
-    immutable_tags = true
+    immutable_tags = false
   }
 
   labels = {
