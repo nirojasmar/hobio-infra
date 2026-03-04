@@ -257,6 +257,13 @@ resource "google_compute_instance" "rabbitmq_instance" {
     environment = var.environment
     service     = "rabbitmq"
   }
+
+  lifecycle {
+    ignore_changes = [
+      metadata_startup_script,
+      boot_disk[0].initialize_params[0].image,
+    ]
+  }
 }
 
 resource "google_artifact_registry_repository" "docker_repo" {
