@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "6.8.0"
+      version = "7.22.0"
     }
   }
 }
@@ -256,6 +256,13 @@ resource "google_compute_instance" "rabbitmq_instance" {
   labels = {
     environment = var.environment
     service     = "rabbitmq"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      metadata_startup_script,
+      boot_disk[0].initialize_params[0].image,
+    ]
   }
 }
 
