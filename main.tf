@@ -282,3 +282,11 @@ resource "google_artifact_registry_repository" "docker_repo" {
     environment = var.type
   }
 }
+
+resource "google_firestore_database" "database" {
+  project     = var.project_id
+  name        = "hobio-${var.environment}-job-status"
+  location_id = var.region
+  type        = "FIRESTORE_NATIVE"
+  database_edition = "STANDARD"
+}
