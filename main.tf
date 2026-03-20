@@ -207,8 +207,8 @@ resource "google_vpc_access_connector" "connector" {
 
 resource "google_compute_instance" "rabbitmq_instance" {
   name         = "${var.project_id}-${var.environment}-rabbitmq-server"
-  machine_type = "e2-micro"
-  zone         = "${var.region}-b"
+  machine_type = "e2-small"
+  zone         = "${var.region}-d"
   tags         = ["allow-ssh", "rabbitmq-server"]
 
   shielded_instance_config {
